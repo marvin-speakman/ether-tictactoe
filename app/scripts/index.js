@@ -18,6 +18,9 @@ const TicTacToe = contract(ticTacToe_artifacts)
 let accounts
 let account
 let ticTacToeInstance
+var nextPlayerEvent
+var gameOverWithWinEvent
+var gameOverWithDrawEvent
 
 window.App = {
   start: function () {
@@ -53,29 +56,40 @@ window.App = {
     TicTacToe.new({from:account, value:web3.toWei(0.1,'ether'), gas:3000000}).then(instance =>{
       ticTacToeInstance = instance;
 
+      $('.in-game').show();
+      $('.waiting-for-join').hide();
+      $('.game-start').hide();
+      $('#game-address').text(instance.address);
+      $('#waiting').show();
+
       var playerJoindEvent = ticTacToeInstance.PlayerJoined();
 
       playerJoindEvent.watch(function (error, eventObj) {
+        $('.waiting-for-join').show();
+        $('#opponent-address').text(eventObj.args.player);
+        $('#your-turn').hide();
+        playerJoindEvent.stopWatching();
         if(!error){
           console.log(eventObj);
         }else{
           console.log(error);
         }
       });
-      
-      var nextPlayerEvent = ticTacToeInstance.NextPlayer();
-      nextPlayerEvent.watch(App.nextPlayer);
-
-      var gameOverWithWinEvent = ticTacToeInstance.GameOverWithWin();
-      gameOverWithWinEvent.watch(App.gameOver);
-
-      var gameOverWithDrawEvent = ticTacToeInstance.GameOverWithDraw();
-      gameOverWithDrawEvent.watch(App.gameOver);
-      
+      App.listenToEvents();
       console.log(instance);
     }).catch(error => {
       console.log(error);
     });
+  },
+  listenToEvents: function() {
+    nextPlayerEvent = ticTacToeInstance.NextPlayer();
+    nextPlayerEvent.watch(App.nextPlayer);
+
+    gameOverWithWinEvent = ticTacToeInstance.GameOverWithWin();
+    gameOverWithWinEvent.watch(App.gameOver);
+
+    gameOverWithDrawEvent = ticTacToeInstance.GameOverWithDraw();
+    gameOverWithDrawEvent.watch(App.gameOver);
   },
 
   joinGame: function(){
@@ -84,18 +98,19 @@ window.App = {
       TicTacToe.at(gameAddress).then(instance => {
         ticTacToeInstance = instance;
 
-        var nextPlayerEvent = ticTacToeInstance.NextPlayer();
-        nextPlayerEvent.watch(App.nextPlayer);
+        
 
-        var gameOverWithWinEvent = ticTacToeInstance.GameOverWithWin();
-        gameOverWithWinEvent.watch(App.gameOver);
-
-        var gameOverWithDrawEvent = ticTacToeInstance.GameOverWithDraw();
-        gameOverWithDrawEvent.watch(App.gameOver);
+        App.listenToEvents();
 
         return ticTacToeInstance.joinGame({from:account, value:web3.toWei(0.1, 'ether'), gass:3000000});
       }).then(txResult => {
-        
+        $('.in-game').show();
+        $('.game-start').hide();
+        $('#game-address').text(ticTacToeInstance.address);
+        $('#your-turn').hide();
+        ticTacToeInstance.player1.call().then(player1Address => {
+          $('#opponent-address').text(player1Address);
+        })
         console.log(txResult);
       })
     }
@@ -112,8 +127,12 @@ window.App = {
           }
         }
       }
+      $('#your-turn').show();
+      $('#waiting').hide();
     } else{
       //oponents turn
+      $('#your-turn').hide();
+      $('#waiting').show();
     }
   },
   gameOver: function(err, eventObj) {
@@ -129,9 +148,9 @@ window.App = {
     }
 
 
-    // nextPlayerEvent.stopWatching();
-    // gameOverWithWinEvent.stopWatching();
-    // gameOverWithDrawEvent.stopWatching();
+    nextPlayerEvent.stopWatching();
+    gameOverWithWinEvent.stopWatching();
+    gameOverWithDrawEvent.stopWatching();
 
     for(var i = 0; i < 3; i++) {
       for(var j = 0; j < 3; j++) {
