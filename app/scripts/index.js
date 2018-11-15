@@ -15,16 +15,17 @@ const TicTacToe = contract(ticTacToe_artifacts)
 // The following code is simple to show off interacting with your contracts.
 // As your needs grow you will likely need to change its form and structure.
 // For application bootstrapping, check out window.addEventListener below.
-let accounts
-let account
-let ticTacToeInstance
-var nextPlayerEvent
-var gameOverWithWinEvent
-var gameOverWithDrawEvent
+var accounts;
+var account;
+var ticTacToeInstance;
+var nextPlayerEvent;
+var gameOverWithWinEvent;
+var gameOverWithDrawEvent;
+var arrEventsFired;
 
 window.App = {
   start: function () {
-    const self = this
+    const self = this;
 
     // Bootstrap the TicTacToe abstraction for Use.
     TicTacToe.setProvider(web3.currentProvider)
@@ -33,16 +34,17 @@ window.App = {
     web3.eth.getAccounts(function (err, accs) {
       if (err != null) {
         alert('There was an error fetching your accounts.')
-        return
+        return;
       }
 
       if (accs.length === 0) {
         alert("Couldn't get any accounts! Make sure your Ethereum client is configured correctly.")
-        return
+        return;
       }
 
       accounts = accs;
       account = accounts[0];
+      arrEventsFired = [];
 
     })
   },
@@ -116,23 +118,27 @@ window.App = {
     }
   },
   nextPlayer: function (error, eventObj) {
-    App.printBoard();
-    if(eventObj.args.player == account){
-      //our turn
-      // on click for board
-      for(var i = 0; i < 3; i++){
-        for(var j = 0; j < 3; j++){
-          if($("#board")[0].children[0].children[i].children[j].innerHTML === "") {
-            $($("#board")[0].children[0].children[i].children[j]).off('click').click({x: i, y:j}, App.setStone);
+    if(arrEventsFired.indexOf(eventObj.blockNumber) == -1) {
+      arrEventsFired.push(eventObj.blockNumber);
+    
+      App.printBoard();
+      if(eventObj.args.player == account){
+        //our turn
+        // on click for board
+        for(var i = 0; i < 3; i++){
+          for(var j = 0; j < 3; j++){
+            if($("#board")[0].children[0].children[i].children[j].innerHTML === "") {
+              $($("#board")[0].children[0].children[i].children[j]).off('click').click({x: i, y:j}, App.setStone);
+            }
           }
         }
+        $('#your-turn').show();
+        $('#waiting').hide();
+      } else{
+        //oponents turn
+        $('#your-turn').hide();
+        $('#waiting').show();
       }
-      $('#your-turn').show();
-      $('#waiting').hide();
-    } else{
-      //oponents turn
-      $('#your-turn').hide();
-      $('#waiting').show();
     }
   },
   gameOver: function(err, eventObj) {

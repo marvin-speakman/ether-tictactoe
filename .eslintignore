@@ -2,3 +2,5 @@ tmp/**
 build/**
 node_modules/**
 contracts/**
+app/**
+/**
